@@ -191,6 +191,19 @@ for name, value in best_program.metrics.items():
     print(f"  {name}: {value:.4f}")
 ```
 
+### Streamlit Frontend
+
+OpenEvolve includes a lightweight Streamlit-based web interface for quick experiments.
+It allows you to specify the initial program, evaluator, configuration file, and run
+parameters, then execute evolution with a single click.
+
+```bash
+pip install streamlit  # if not already installed
+streamlit run scripts/frontend.py
+# or
+make frontend
+```
+
 ### Command-Line Usage
 
 OpenEvolve can also be run from the command line:

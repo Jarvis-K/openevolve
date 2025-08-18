@@ -16,7 +16,8 @@ help:
 	@echo "  test           - Run tests"
 	@echo "  docker-build   - Build the Docker image"
 	@echo "  docker-run     - Run the Docker container with the example"
-	@echo "  visualizer     - Run the visualization script"
+        @echo "  visualizer     - Run the visualization script"
+        @echo "  frontend       - Run the Streamlit frontend"
 
 .PHONY: all
 all: install test
@@ -54,4 +55,9 @@ docker-run:
 # Run the visualization script
 .PHONY: visualizer
 visualizer:
-	$(PYTHON) scripts/visualizer.py --path examples/
+        $(PYTHON) scripts/visualizer.py --path examples/
+
+# Run the Streamlit frontend
+.PHONY: frontend
+frontend:
+        $(PYTHON) -m streamlit run scripts/frontend.py
