@@ -93,7 +93,7 @@ checkpoint_dir = None  # Global variable to store the checkpoint directory
 @app.route("/api/data")
 def data():
     global checkpoint_dir
-    base_folder = os.environ.get("EVOLVE_OUTPUT", "examples/")
+    base_folder = os.environ.get("EVOLVE_OUTPUT", "examples/circle_packing/")
     checkpoint_dir = find_latest_checkpoint(base_folder)
     if not checkpoint_dir:
         logger.info(f"No checkpoints found in {base_folder}")
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--path",
         type=str,
-        default="examples/",
+        default="examples/circle_packing/",
         help="Path to openevolve_output or checkpoints folder",
     )
     parser.add_argument("--host", type=str, default="127.0.0.1")
