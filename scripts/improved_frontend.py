@@ -26,7 +26,7 @@ if 'visualizer_process' not in st.session_state:
 def start_visualizer():
     if st.session_state.visualizer_process is None:
         try:
-            cmd = ["python", "scripts/visualizer.py", "--path", "demo_evolution_data", "--host", "127.0.0.1", "--port", "8081"]
+            cmd = ["python3", "scripts/visualizer.py", "--path", "demo_evolution_data", "--host", "127.0.0.1", "--port", "8081"]
             st.session_state.visualizer_process = subprocess.Popen(cmd)
             time.sleep(2)
             return True
@@ -36,7 +36,8 @@ def start_visualizer():
     return True
 
 def stop_visualizer():
-    if st.session_state.visualizer_process:
+    # Check if session_state exists and has the attribute
+    if hasattr(st, 'session_state') and hasattr(st.session_state, 'visualizer_process') and st.session_state.visualizer_process:
         st.session_state.visualizer_process.terminate()
         st.session_state.visualizer_process = None
 
