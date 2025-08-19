@@ -11,6 +11,26 @@ st.set_page_config(page_title="AlgoArts", page_icon="🎨", layout="wide")
 st.title("AlgoArts")
 st.caption("Streamlined interface for algorithm evolution")
 
+# Apply a dark tech-style theme
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #0e1117;
+        color: #00ff9f;
+    }
+    [data-testid="stSidebar"] {
+        background-color: #0b0c10;
+    }
+    h1, h2, h3, h4, h5, h6, label {
+        color: #00ff9f;
+        font-family: 'Courier New', monospace;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 with st.sidebar:
     st.header("Run Configuration")
     api_key = st.text_input("OpenAI API Key", type="password")
