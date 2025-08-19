@@ -1,0 +1,18 @@
+{
+  "id": "b37d91e5-de90-49e8-ac1b-0c6b671b03f9",
+  "code": "import numpy as np\n\ndef evolved_algorithm(data):\n    # Generated at iteration 29 on island 2\n    # Performance score: 0.9167\n    weights = np.array([0.502, 0.222, 0.244])\n    processed = data * weights.sum() * 0.917\n    return processed + -0.516",
+  "language": "python",
+  "metrics": {
+    "combined_score": 0.9166830423485418,
+    "accuracy": 0.9832425257637559,
+    "efficiency": 0.9047056541617114,
+    "complexity": 0.5697315256169346,
+    "robustness": 0.9280675632885839
+  },
+  "iteration_found": 29,
+  "parent_id": "1efaf8ce-10be-4ab5-8754-f493f2522ab1",
+  "metadata": {
+    "island": 2,
+    "created_at": "2024-01-02T05:00:00Z"
+  }
+}

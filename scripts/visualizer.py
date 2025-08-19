@@ -4,7 +4,10 @@ import glob
 import logging
 import shutil
 import re as _re
-from flask import Flask, render_template, render_template_string, jsonify
+import time
+import threading
+from pathlib import Path
+from flask import Flask, render_template, render_template_string, jsonify, request
 
 
 logger = logging.getLogger(__name__)
@@ -26,19 +29,111 @@ def find_latest_checkpoint(base_folder):
     return checkpoint_folders[0]
 
 
+def calculate_island_stats(nodes, islands_data, meta):
+    """Calculate statistics for each island"""
+    stats = []
+    island_generations = meta.get("island_generations", [0] * len(islands_data))
+    
+    for island_idx, island_programs in enumerate(islands_data):
+        # Get programs for this island
+        island_nodes = [node for node in nodes if node.get("island") == island_idx]
+        
+        if island_nodes:
+            # Calculate scores
+            scores = []
+            for node in island_nodes:
+                metrics = node.get("metrics", {})
+                if isinstance(metrics, dict) and "combined_score" in metrics:
+                    scores.append(metrics["combined_score"])
+            
+            best_score = max(scores) if scores else 0.0
+            avg_score = sum(scores) / len(scores) if scores else 0.0
+            
+            # Find best program in this island
+            best_program = None
+            for node in island_nodes:
+                metrics = node.get("metrics", {})
+                if isinstance(metrics, dict) and metrics.get("combined_score") == best_score:
+                    best_program = node
+                    break
+        else:
+            best_score = avg_score = 0.0
+            best_program = None
+        
+        stats.append({
+            "island_id": island_idx,
+            "population_size": len(island_nodes),
+            "best_score": best_score,
+            "average_score": avg_score,
+            "generation": island_generations[island_idx] if island_idx < len(island_generations) else 0,
+            "best_program_id": best_program["id"] if best_program else None,
+            "is_current": island_idx == meta.get("current_island", 0)
+        })
+    
+    return stats
+
+
+def generate_learning_curve(nodes):
+    """Generate learning curve data showing best score per iteration"""
+    if not nodes:
+        return []
+    
+    # Group programs by iteration and find best score at each iteration
+    iteration_best = {}
+    
+    for node in nodes:
+        iteration = node.get("iteration_found", 0)
+        metrics = node.get("metrics", {})
+        if isinstance(metrics, dict) and "combined_score" in metrics:
+            score = metrics["combined_score"]
+            if iteration not in iteration_best or score > iteration_best[iteration]["score"]:
+                iteration_best[iteration] = {
+                    "iteration": iteration,
+                    "score": score,
+                    "program_id": node["id"],
+                    "code": node.get("code", ""),
+                    "metrics": metrics
+                }
+    
+    # Convert to sorted list
+    learning_curve = list(iteration_best.values())
+    learning_curve.sort(key=lambda x: x["iteration"])
+    
+    # Ensure we have the cumulative best (best score so far)
+    cumulative_best = []
+    current_best_score = float('-inf')
+    
+    for point in learning_curve:
+        if point["score"] > current_best_score:
+            current_best_score = point["score"]
+            cumulative_best.append(point)
+        else:
+            # Use previous best but update iteration
+            if cumulative_best:
+                prev_best = cumulative_best[-1].copy()
+                prev_best["iteration"] = point["iteration"]
+                cumulative_best.append(prev_best)
+            else:
+                cumulative_best.append(point)
+    
+    return cumulative_best
+
+
 def load_evolution_data(checkpoint_folder):
     meta_path = os.path.join(checkpoint_folder, "metadata.json")
     programs_dir = os.path.join(checkpoint_folder, "programs")
     if not os.path.exists(meta_path) or not os.path.exists(programs_dir):
         logger.info(f"Missing metadata.json or programs dir in {checkpoint_folder}")
-        return {"archive": [], "nodes": [], "edges": [], "checkpoint_dir": checkpoint_folder}
+        return {"archive": [], "nodes": [], "edges": [], "checkpoint_dir": checkpoint_folder, "islands_stats": [], "learning_curve": []}
     with open(meta_path) as f:
         meta = json.load(f)
 
     nodes = []
     id_to_program = {}
     pids = set()
-    for island_idx, id_list in enumerate(meta.get("islands", [])):
+    islands_data = meta.get("islands", [])
+    
+    for island_idx, id_list in enumerate(islands_data):
         for pid in id_list:
             prog_path = os.path.join(programs_dir, f"{pid}.json")
 
@@ -73,12 +168,20 @@ def load_evolution_data(checkpoint_folder):
         if parent_id and parent_id in id_to_program:
             edges.append({"source": parent_id, "target": prog["id"]})
 
+    # Calculate island statistics
+    islands_stats = calculate_island_stats(nodes, islands_data, meta)
+    
+    # Generate learning curve data (best score per iteration)
+    learning_curve = generate_learning_curve(nodes)
+
     logger.info(f"Loaded {len(nodes)} nodes and {len(edges)} edges from {checkpoint_folder}")
     return {
         "archive": meta.get("archive", []),
         "nodes": nodes,
         "edges": edges,
         "checkpoint_dir": checkpoint_folder,
+        "islands_stats": islands_stats,
+        "learning_curve": learning_curve,
     }
 
 
@@ -88,6 +191,21 @@ def index():
 
 
 checkpoint_dir = None  # Global variable to store the checkpoint directory
+evolution_status = {
+    "is_running": False,
+    "current_iteration": 0,
+    "max_iterations": 0,
+    "best_score": None,
+    "evolution_speed": 0.0,  # iterations per minute
+    "active_programs": 0,
+    "success_rate": 0.0,
+    "start_time": None,
+    "last_update": None,
+    "total_programs": 0,
+    "failed_programs": 0,
+    "score_history": []  # List of (timestamp, score) tuples
+}
+status_lock = threading.Lock()
 
 
 @app.route("/api/data")
@@ -101,8 +219,123 @@ def data():
 
     logger.info(f"Loading data from checkpoint: {checkpoint_dir}")
     data = load_evolution_data(checkpoint_dir)
+    
+    # Update evolution status based on loaded data
+    update_evolution_status_from_data(data)
+    
     logger.debug(f"Data: {data}")
     return jsonify(data)
+
+
+@app.route("/api/status")
+def status():
+    """Return current evolution status"""
+    with status_lock:
+        current_status = evolution_status.copy()
+        current_status["last_update"] = time.time()
+    return jsonify(current_status)
+
+
+@app.route("/api/status", methods=["POST"])
+def update_status():
+    """Update evolution status from external source (e.g., controller)"""
+    global evolution_status
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        with status_lock:
+            # Update provided fields
+            for key in ["is_running", "current_iteration", "max_iterations", "best_score", 
+                       "active_programs", "success_rate", "total_programs", "failed_programs"]:
+                if key in data:
+                    evolution_status[key] = data[key]
+            
+            # Update timestamps
+            current_time = time.time()
+            evolution_status["last_update"] = current_time
+            
+            if data.get("is_running") and not evolution_status.get("start_time"):
+                evolution_status["start_time"] = current_time
+            
+            # Update score history
+            if "best_score" in data and data["best_score"] is not None:
+                score = data["best_score"]
+                if not evolution_status["score_history"] or score > evolution_status["score_history"][-1][1]:
+                    evolution_status["score_history"].append((current_time, score))
+                    # Keep only last 100 entries
+                    evolution_status["score_history"] = evolution_status["score_history"][-100:]
+            
+            # Calculate evolution speed
+            if evolution_status["start_time"] and evolution_status["current_iteration"] > 0:
+                elapsed_minutes = (current_time - evolution_status["start_time"]) / 60
+                if elapsed_minutes > 0:
+                    evolution_status["evolution_speed"] = evolution_status["current_iteration"] / elapsed_minutes
+        
+        return jsonify({"status": "success"})
+    
+    except Exception as e:
+        logger.error(f"Error updating status: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+def update_evolution_status_from_data(data):
+    """Update evolution status based on loaded checkpoint data"""
+    global evolution_status
+    
+    with status_lock:
+        nodes = data.get("nodes", [])
+        if not nodes:
+            return
+            
+        # Calculate current iteration (max iteration found + 1)
+        max_iteration = max((node.get("iteration_found", 0) for node in nodes), default=0)
+        evolution_status["current_iteration"] = max_iteration
+        
+        # Find best score
+        best_score = None
+        for node in nodes:
+            metrics = node.get("metrics", {})
+            if isinstance(metrics, dict):
+                score = metrics.get("combined_score")
+                if score is not None and (best_score is None or score > best_score):
+                    best_score = score
+        
+        if best_score is not None:
+            evolution_status["best_score"] = best_score
+            # Add to score history if it's a new best score
+            current_time = time.time()
+            if not evolution_status["score_history"] or best_score > evolution_status["score_history"][-1][1]:
+                evolution_status["score_history"].append((current_time, best_score))
+                # Keep only last 100 entries
+                evolution_status["score_history"] = evolution_status["score_history"][-100:]
+        
+        # Calculate success rate
+        total_programs = len(nodes)
+        failed_programs = sum(1 for node in nodes if not node.get("metrics"))
+        evolution_status["total_programs"] = total_programs
+        evolution_status["failed_programs"] = failed_programs
+        evolution_status["success_rate"] = (total_programs - failed_programs) / total_programs if total_programs > 0 else 0.0
+        
+        # Estimate if evolution is running (based on recent activity)
+        current_time = time.time()
+        if evolution_status["last_update"]:
+            time_since_last = current_time - evolution_status["last_update"]
+            # Consider running if updated within last 30 seconds
+            evolution_status["is_running"] = time_since_last < 30
+        else:
+            evolution_status["is_running"] = True
+            evolution_status["start_time"] = current_time
+        
+        evolution_status["last_update"] = current_time
+        
+        # Calculate evolution speed (iterations per minute)
+        if evolution_status["start_time"] and max_iteration > 0:
+            elapsed_minutes = (current_time - evolution_status["start_time"]) / 60
+            if elapsed_minutes > 0:
+                evolution_status["evolution_speed"] = max_iteration / elapsed_minutes
 
 
 @app.route("/program/<program_id>")

@@ -3,16 +3,25 @@
 import { sidebarSticky, showSidebarContent } from './sidebar.js';
 import { updateListSidebarLayout, renderNodeList } from './list.js';
 import { renderGraph, g, getNodeRadius, animateGraphNodeAttributes } from './graph.js';
+import { renderIslandsView } from './islands.js';
+import { renderLearningCurve } from './learning-curve.js';
 
 export let allNodeData = [];
 let metricMinMax = {};
 
 let archiveProgramIds = [];
 
+// Make functions globally available
+window.renderIslandsView = renderIslandsView;
+window.renderLearningCurve = renderLearningCurve;
+
 const sidebarEl = document.getElementById('sidebar');
 
 let lastDataStr = null;
 let selectedProgramId = null;
+
+// Make data globally available
+window.lastDataStr = null;
 
 function computeMetricMinMax(nodes) {
     metricMinMax = {};
@@ -79,6 +88,7 @@ function renderMetricBar(value, min, max, opts={}) {
 function loadAndRenderData(data) {
     archiveProgramIds = Array.isArray(data.archive) ? data.archive : [];
     lastDataStr = JSON.stringify(data);
+    window.lastDataStr = lastDataStr;
     renderGraph(data);
     renderNodeList(data.nodes);
     document.getElementById('checkpoint-label').textContent =
@@ -106,12 +116,28 @@ function loadAndRenderData(data) {
     metricSelect.addEventListener('change', function() {
         localStorage.setItem('selectedMetric', metricSelect.value);
     });
+    
+    // Update performance view if active
     const perfTab = document.getElementById('tab-performance');
     const perfView = document.getElementById('view-performance');
     if (perfTab && perfView && (perfTab.classList.contains('active') || perfView.style.display !== 'none')) {
         if (window.updatePerformanceGraph) {
             window.updatePerformanceGraph(data.nodes);
         }
+    }
+    
+    // Update islands view if active
+    const islandsTab = document.getElementById('tab-islands');
+    const islandsView = document.getElementById('view-islands');
+    if (islandsTab && islandsView && (islandsTab.classList.contains('active') || islandsView.style.display !== 'none')) {
+        renderIslandsView(data);
+    }
+    
+    // Update learning curve view if active
+    const learningTab = document.getElementById('tab-learning');
+    const learningView = document.getElementById('view-learning');
+    if (learningTab && learningView && (learningTab.classList.contains('active') || learningView.style.display !== 'none')) {
+        renderLearningCurve(data);
     }
 }
 
