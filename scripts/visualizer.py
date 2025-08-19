@@ -4,7 +4,10 @@ import glob
 import logging
 import shutil
 import re as _re
-from flask import Flask, render_template, render_template_string, jsonify
+import time
+import threading
+from pathlib import Path
+from flask import Flask, render_template, render_template_string, jsonify, request
 
 
 logger = logging.getLogger(__name__)
@@ -88,6 +91,21 @@ def index():
 
 
 checkpoint_dir = None  # Global variable to store the checkpoint directory
+evolution_status = {
+    "is_running": False,
+    "current_iteration": 0,
+    "max_iterations": 0,
+    "best_score": None,
+    "evolution_speed": 0.0,  # iterations per minute
+    "active_programs": 0,
+    "success_rate": 0.0,
+    "start_time": None,
+    "last_update": None,
+    "total_programs": 0,
+    "failed_programs": 0,
+    "score_history": []  # List of (timestamp, score) tuples
+}
+status_lock = threading.Lock()
 
 
 @app.route("/api/data")
@@ -101,8 +119,123 @@ def data():
 
     logger.info(f"Loading data from checkpoint: {checkpoint_dir}")
     data = load_evolution_data(checkpoint_dir)
+    
+    # Update evolution status based on loaded data
+    update_evolution_status_from_data(data)
+    
     logger.debug(f"Data: {data}")
     return jsonify(data)
+
+
+@app.route("/api/status")
+def status():
+    """Return current evolution status"""
+    with status_lock:
+        current_status = evolution_status.copy()
+        current_status["last_update"] = time.time()
+    return jsonify(current_status)
+
+
+@app.route("/api/status", methods=["POST"])
+def update_status():
+    """Update evolution status from external source (e.g., controller)"""
+    global evolution_status
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        with status_lock:
+            # Update provided fields
+            for key in ["is_running", "current_iteration", "max_iterations", "best_score", 
+                       "active_programs", "success_rate", "total_programs", "failed_programs"]:
+                if key in data:
+                    evolution_status[key] = data[key]
+            
+            # Update timestamps
+            current_time = time.time()
+            evolution_status["last_update"] = current_time
+            
+            if data.get("is_running") and not evolution_status.get("start_time"):
+                evolution_status["start_time"] = current_time
+            
+            # Update score history
+            if "best_score" in data and data["best_score"] is not None:
+                score = data["best_score"]
+                if not evolution_status["score_history"] or score > evolution_status["score_history"][-1][1]:
+                    evolution_status["score_history"].append((current_time, score))
+                    # Keep only last 100 entries
+                    evolution_status["score_history"] = evolution_status["score_history"][-100:]
+            
+            # Calculate evolution speed
+            if evolution_status["start_time"] and evolution_status["current_iteration"] > 0:
+                elapsed_minutes = (current_time - evolution_status["start_time"]) / 60
+                if elapsed_minutes > 0:
+                    evolution_status["evolution_speed"] = evolution_status["current_iteration"] / elapsed_minutes
+        
+        return jsonify({"status": "success"})
+    
+    except Exception as e:
+        logger.error(f"Error updating status: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+def update_evolution_status_from_data(data):
+    """Update evolution status based on loaded checkpoint data"""
+    global evolution_status
+    
+    with status_lock:
+        nodes = data.get("nodes", [])
+        if not nodes:
+            return
+            
+        # Calculate current iteration (max iteration found + 1)
+        max_iteration = max((node.get("iteration_found", 0) for node in nodes), default=0)
+        evolution_status["current_iteration"] = max_iteration
+        
+        # Find best score
+        best_score = None
+        for node in nodes:
+            metrics = node.get("metrics", {})
+            if isinstance(metrics, dict):
+                score = metrics.get("combined_score")
+                if score is not None and (best_score is None or score > best_score):
+                    best_score = score
+        
+        if best_score is not None:
+            evolution_status["best_score"] = best_score
+            # Add to score history if it's a new best score
+            current_time = time.time()
+            if not evolution_status["score_history"] or best_score > evolution_status["score_history"][-1][1]:
+                evolution_status["score_history"].append((current_time, best_score))
+                # Keep only last 100 entries
+                evolution_status["score_history"] = evolution_status["score_history"][-100:]
+        
+        # Calculate success rate
+        total_programs = len(nodes)
+        failed_programs = sum(1 for node in nodes if not node.get("metrics"))
+        evolution_status["total_programs"] = total_programs
+        evolution_status["failed_programs"] = failed_programs
+        evolution_status["success_rate"] = (total_programs - failed_programs) / total_programs if total_programs > 0 else 0.0
+        
+        # Estimate if evolution is running (based on recent activity)
+        current_time = time.time()
+        if evolution_status["last_update"]:
+            time_since_last = current_time - evolution_status["last_update"]
+            # Consider running if updated within last 30 seconds
+            evolution_status["is_running"] = time_since_last < 30
+        else:
+            evolution_status["is_running"] = True
+            evolution_status["start_time"] = current_time
+        
+        evolution_status["last_update"] = current_time
+        
+        # Calculate evolution speed (iterations per minute)
+        if evolution_status["start_time"] and max_iteration > 0:
+            elapsed_minutes = (current_time - evolution_status["start_time"]) / 60
+            if elapsed_minutes > 0:
+                evolution_status["evolution_speed"] = max_iteration / elapsed_minutes
 
 
 @app.route("/program/<program_id>")
