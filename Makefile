@@ -18,6 +18,7 @@ help:
 	@echo "  docker-run     - Run the Docker container with the example"
         @echo "  visualizer     - Run the visualization script"
         @echo "  frontend       - Run the Streamlit frontend"
+        @echo "  algoarts       - Run the AlgoArts web UI"
 
 .PHONY: all
 all: install test
@@ -61,3 +62,7 @@ visualizer:
 .PHONY: frontend
 frontend:
         $(PYTHON) -m streamlit run scripts/frontend.py
+
+# Run the AlgoArts UI (alias for frontend)
+.PHONY: algoarts
+algoarts: frontend

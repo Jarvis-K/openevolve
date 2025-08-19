@@ -191,15 +191,15 @@ for name, value in best_program.metrics.items():
     print(f"  {name}: {value:.4f}")
 ```
 
-### Streamlit Frontend
+### AlgoArts Frontend
 
-OpenEvolve ships with an interactive Streamlit web UI. Use the sidebar to upload or select an initial program, evaluator script, and optional configuration file, adjust run parameters, and set an OpenAI API key. Click **Run Evolution** to launch.
+OpenEvolve ships with **AlgoArts**, a Streamlit-based web UI for running experiments. Each input lets you toggle between providing a file path or uploading a file via tabs. Configure the initial program, evaluator, optional config, run parameters, and an OpenAI API key, then click **Run Evolution** to start.
 
 ```bash
 pip install streamlit  # if not already installed
 streamlit run scripts/frontend.py
 # or
-make frontend
+make algoarts
 ```
 
 ### Command-Line Usage

@@ -7,27 +7,44 @@ import streamlit as st
 from openevolve import OpenEvolve
 from openevolve.config import load_config
 
-st.set_page_config(page_title="OpenEvolve", layout="wide")
-st.title("OpenEvolve Web UI")
+st.set_page_config(page_title="AlgoArts", page_icon="🎨", layout="wide")
+st.title("AlgoArts")
+st.caption("Streamlined interface for algorithm evolution")
 
 with st.sidebar:
     st.header("Run Configuration")
     api_key = st.text_input("OpenAI API Key", type="password")
-    initial_upload = st.file_uploader("Initial program (.py)", type=["py"])
-    initial_path = st.text_input(
-        "Initial program path",
-        "examples/function_minimization/initial_program.py",
-    )
-    eval_upload = st.file_uploader("Evaluation script (.py)", type=["py"])
-    eval_path = st.text_input(
-        "Evaluator path",
-        "examples/function_minimization/evaluator.py",
-    )
-    config_upload = st.file_uploader("Config (YAML)", type=["yaml", "yml"])
-    config_path = st.text_input(
-        "Config path (optional)",
-        "examples/function_minimization/config.yaml",
-    )
+
+    st.subheader("Initial Program")
+    init_path_tab, init_upload_tab = st.tabs(["Path", "Upload"])
+    with init_path_tab:
+        initial_path = st.text_input(
+            "Initial program path",
+            "examples/function_minimization/initial_program.py",
+        )
+    with init_upload_tab:
+        initial_upload = st.file_uploader("Initial program (.py)", type=["py"], key="init_upload")
+
+    st.subheader("Evaluator")
+    eval_path_tab, eval_upload_tab = st.tabs(["Path", "Upload"])
+    with eval_path_tab:
+        eval_path = st.text_input(
+            "Evaluator path",
+            "examples/function_minimization/evaluator.py",
+        )
+    with eval_upload_tab:
+        eval_upload = st.file_uploader("Evaluation script (.py)", type=["py"], key="eval_upload")
+
+    st.subheader("Config")
+    cfg_path_tab, cfg_upload_tab = st.tabs(["Path", "Upload"])
+    with cfg_path_tab:
+        config_path = st.text_input(
+            "Config path (optional)",
+            "examples/function_minimization/config.yaml",
+        )
+    with cfg_upload_tab:
+        config_upload = st.file_uploader("Config (YAML)", type=["yaml", "yml"], key="cfg_upload")
+
     iterations = st.number_input("Iterations", min_value=1, value=10)
     target_score = st.number_input("Target score", value=0.0, step=0.1)
     run_clicked = st.button("Run Evolution")
