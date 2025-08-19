@@ -193,9 +193,7 @@ for name, value in best_program.metrics.items():
 
 ### Streamlit Frontend
 
-OpenEvolve includes a lightweight Streamlit-based web interface for quick experiments.
-It allows you to specify the initial program, evaluator, configuration file, and run
-parameters, then execute evolution with a single click.
+OpenEvolve ships with an interactive Streamlit web UI. Use the sidebar to upload or select an initial program, evaluator script, and optional configuration file, adjust run parameters, and set an OpenAI API key. Click **Run Evolution** to launch.
 
 ```bash
 pip install streamlit  # if not already installed
