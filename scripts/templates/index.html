@@ -16,6 +16,8 @@
         <div class="tabs">
             <div class="tab active" id="tab-branching">Branching</div>
             <div class="tab" id="tab-performance">Performance</div>
+            <div class="tab" id="tab-islands">Islands</div>
+            <div class="tab" id="tab-learning">Learning Curve</div>
             <div class="tab" id="tab-list">List</div>
         </div>
         <label class="toolbar-label" for="metric-select">Metric:
@@ -101,6 +103,22 @@
         <div id="node-list-container"></div>
     </div>
     <div id="view-performance" style="padding-top:4.5em;"></div>
+    <div id="view-islands" style="display:none;padding-top:3.5em;">
+        <div class="islands-container">
+            <h2>Islands Status</h2>
+            <div id="islands-grid" class="islands-grid"></div>
+        </div>
+    </div>
+    <div id="view-learning" style="display:none;padding-top:3.5em;">
+        <div class="learning-container">
+            <h2>Learning Curve</h2>
+            <div id="learning-curve-chart"></div>
+            <div id="code-viewer" class="code-viewer" style="display:none;">
+                <h3>Program Code (Iteration <span id="code-iteration"></span>)</h3>
+                <pre id="code-content"></pre>
+            </div>
+        </div>
+    </div>
     <div id="view-prompts" style="padding-top:3.5em;"></div>
     <script type="module" src="{{ url_for('static', filename='js/state.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
@@ -109,5 +127,7 @@
     <script type="module" src="{{ url_for('static', filename='js/graph.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/performance.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/list.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/islands.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/learning-curve.js') }}"></script>
 </body>
 </html>

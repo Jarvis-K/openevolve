@@ -29,19 +29,111 @@ def find_latest_checkpoint(base_folder):
     return checkpoint_folders[0]
 
 
+def calculate_island_stats(nodes, islands_data, meta):
+    """Calculate statistics for each island"""
+    stats = []
+    island_generations = meta.get("island_generations", [0] * len(islands_data))
+    
+    for island_idx, island_programs in enumerate(islands_data):
+        # Get programs for this island
+        island_nodes = [node for node in nodes if node.get("island") == island_idx]
+        
+        if island_nodes:
+            # Calculate scores
+            scores = []
+            for node in island_nodes:
+                metrics = node.get("metrics", {})
+                if isinstance(metrics, dict) and "combined_score" in metrics:
+                    scores.append(metrics["combined_score"])
+            
+            best_score = max(scores) if scores else 0.0
+            avg_score = sum(scores) / len(scores) if scores else 0.0
+            
+            # Find best program in this island
+            best_program = None
+            for node in island_nodes:
+                metrics = node.get("metrics", {})
+                if isinstance(metrics, dict) and metrics.get("combined_score") == best_score:
+                    best_program = node
+                    break
+        else:
+            best_score = avg_score = 0.0
+            best_program = None
+        
+        stats.append({
+            "island_id": island_idx,
+            "population_size": len(island_nodes),
+            "best_score": best_score,
+            "average_score": avg_score,
+            "generation": island_generations[island_idx] if island_idx < len(island_generations) else 0,
+            "best_program_id": best_program["id"] if best_program else None,
+            "is_current": island_idx == meta.get("current_island", 0)
+        })
+    
+    return stats
+
+
+def generate_learning_curve(nodes):
+    """Generate learning curve data showing best score per iteration"""
+    if not nodes:
+        return []
+    
+    # Group programs by iteration and find best score at each iteration
+    iteration_best = {}
+    
+    for node in nodes:
+        iteration = node.get("iteration_found", 0)
+        metrics = node.get("metrics", {})
+        if isinstance(metrics, dict) and "combined_score" in metrics:
+            score = metrics["combined_score"]
+            if iteration not in iteration_best or score > iteration_best[iteration]["score"]:
+                iteration_best[iteration] = {
+                    "iteration": iteration,
+                    "score": score,
+                    "program_id": node["id"],
+                    "code": node.get("code", ""),
+                    "metrics": metrics
+                }
+    
+    # Convert to sorted list
+    learning_curve = list(iteration_best.values())
+    learning_curve.sort(key=lambda x: x["iteration"])
+    
+    # Ensure we have the cumulative best (best score so far)
+    cumulative_best = []
+    current_best_score = float('-inf')
+    
+    for point in learning_curve:
+        if point["score"] > current_best_score:
+            current_best_score = point["score"]
+            cumulative_best.append(point)
+        else:
+            # Use previous best but update iteration
+            if cumulative_best:
+                prev_best = cumulative_best[-1].copy()
+                prev_best["iteration"] = point["iteration"]
+                cumulative_best.append(prev_best)
+            else:
+                cumulative_best.append(point)
+    
+    return cumulative_best
+
+
 def load_evolution_data(checkpoint_folder):
     meta_path = os.path.join(checkpoint_folder, "metadata.json")
     programs_dir = os.path.join(checkpoint_folder, "programs")
     if not os.path.exists(meta_path) or not os.path.exists(programs_dir):
         logger.info(f"Missing metadata.json or programs dir in {checkpoint_folder}")
-        return {"archive": [], "nodes": [], "edges": [], "checkpoint_dir": checkpoint_folder}
+        return {"archive": [], "nodes": [], "edges": [], "checkpoint_dir": checkpoint_folder, "islands_stats": [], "learning_curve": []}
     with open(meta_path) as f:
         meta = json.load(f)
 
     nodes = []
     id_to_program = {}
     pids = set()
-    for island_idx, id_list in enumerate(meta.get("islands", [])):
+    islands_data = meta.get("islands", [])
+    
+    for island_idx, id_list in enumerate(islands_data):
         for pid in id_list:
             prog_path = os.path.join(programs_dir, f"{pid}.json")
 
@@ -76,12 +168,20 @@ def load_evolution_data(checkpoint_folder):
         if parent_id and parent_id in id_to_program:
             edges.append({"source": parent_id, "target": prog["id"]})
 
+    # Calculate island statistics
+    islands_stats = calculate_island_stats(nodes, islands_data, meta)
+    
+    # Generate learning curve data (best score per iteration)
+    learning_curve = generate_learning_curve(nodes)
+
     logger.info(f"Loaded {len(nodes)} nodes and {len(edges)} edges from {checkpoint_folder}")
     return {
         "archive": meta.get("archive", []),
         "nodes": nodes,
         "edges": edges,
         "checkpoint_dir": checkpoint_folder,
+        "islands_stats": islands_stats,
+        "learning_curve": learning_curve,
     }
 
 
