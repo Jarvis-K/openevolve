@@ -65,10 +65,10 @@ function setTheme(theme) {
 function getSystemTheme() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
-// On load, use localStorage or system default to determine theme
+// On load, use localStorage or default to light theme
 (function() {
     let theme = localStorage.getItem('theme');
-    if (!theme) theme = getSystemTheme();
+    if (!theme) theme = 'light';  // Default to light mode for professional appearance
     setTheme(theme);
 })();
 document.getElementById('darkmode-toggle').addEventListener('change', function() {
