@@ -26,7 +26,7 @@ if 'visualizer_process' not in st.session_state:
 def start_visualizer():
     if st.session_state.visualizer_process is None:
         try:
-            cmd = ["python3", "scripts/visualizer.py", "--path", "demo_evolution_data", "--host", "127.0.0.1", "--port", "8081"]
+            cmd = ["python3", "scripts/visualizer.py", "--path", "demo_evolution_data", "--host", "0.0.0.0", "--port", "8081"]
             st.session_state.visualizer_process = subprocess.Popen(cmd)
             time.sleep(2)
             return True
@@ -88,7 +88,15 @@ with col1:
     
     if st.session_state.evolution_running:
         if start_visualizer():
-            components.iframe("http://127.0.0.1:8081", height=600)
+            # 动态获取当前访问的主机地址
+            # 从浏览器的URL中提取主机地址
+            components.html("""
+                <script>
+                var currentHost = window.location.hostname;
+                var visualizerUrl = 'http://' + currentHost + ':8081';
+                document.write('<iframe src="' + visualizerUrl + '" width="100%" height="600px" frameborder="0"></iframe>');
+                </script>
+            """, height=600)
         else:
             st.error("无法启动可视化器")
     else:
