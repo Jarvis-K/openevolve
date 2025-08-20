@@ -17,7 +17,8 @@ help:
 	@echo "  docker-build   - Build the Docker image"
 	@echo "  docker-run     - Run the Docker container with the example"
         @echo "  visualizer     - Run the visualization script"
-        @echo "  frontend       - Run the Streamlit frontend"
+        @echo "  frontend       - Run the Streamlit frontend (remote access)"
+        @echo "  frontend-remote- Run the improved Streamlit frontend (remote access)"
         @echo "  algoarts       - Run the AlgoArts web UI"
 
 .PHONY: all
@@ -61,7 +62,12 @@ visualizer:
 # Run the Streamlit frontend
 .PHONY: frontend
 frontend:
-        $(PYTHON) -m streamlit run scripts/frontend.py
+        $(PYTHON) -m streamlit run scripts/frontend.py --server.address=0.0.0.0 --server.port=8501 --server.headless=true
+
+# Run the improved Streamlit frontend (supports remote access)
+.PHONY: frontend-remote
+frontend-remote:
+        $(PYTHON) -m streamlit run scripts/improved_frontend.py --server.address=0.0.0.0 --server.port=8501 --server.headless=true
 
 # Run the AlgoArts UI (alias for frontend)
 .PHONY: algoarts

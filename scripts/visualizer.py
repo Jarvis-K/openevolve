@@ -412,7 +412,7 @@ if __name__ == "__main__":
         default="examples/circle_packing/",
         help="Path to openevolve_output or checkpoints folder",
     )
-    parser.add_argument("--host", type=str, default="127.0.0.1")
+    parser.add_argument("--host", type=str, default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument(
         "--log-level",
