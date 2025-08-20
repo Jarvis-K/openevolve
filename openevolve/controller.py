@@ -6,6 +6,7 @@ import asyncio
 import logging
 import os
 import signal
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -279,22 +280,28 @@ class OpenEvolve:
                 self.config, self.evaluation_file, self.database
             )
 
-            # Set up signal handlers for graceful shutdown
-            def signal_handler(signum, frame):
-                logger.info(f"Received signal {signum}, initiating graceful shutdown...")
-                self.parallel_controller.request_shutdown()
+            # Set up signal handlers for graceful shutdown only in main thread
+            if threading.current_thread() is threading.main_thread():
 
-                # Set up a secondary handler for immediate exit if user presses Ctrl+C again
-                def force_exit_handler(signum, frame):
-                    logger.info("Force exit requested - terminating immediately")
-                    import sys
+                def signal_handler(signum, frame):
+                    logger.info(f"Received signal {signum}, initiating graceful shutdown...")
+                    if self.parallel_controller:
+                        self.parallel_controller.request_shutdown()
 
-                    sys.exit(0)
+                    # Set up a secondary handler for immediate exit if user presses Ctrl+C again
+                    def force_exit_handler(signum, frame):
+                        logger.info("Force exit requested - terminating immediately")
+                        import sys
 
-                signal.signal(signal.SIGINT, force_exit_handler)
+                        sys.exit(0)
 
-            signal.signal(signal.SIGINT, signal_handler)
-            signal.signal(signal.SIGTERM, signal_handler)
+                    signal.signal(signal.SIGINT, force_exit_handler)
+
+                try:
+                    signal.signal(signal.SIGINT, signal_handler)
+                    signal.signal(signal.SIGTERM, signal_handler)
+                except ValueError:
+                    logger.warning("Signal handlers can only be set in the main thread; skipping")
 
             self.parallel_controller.start()
 

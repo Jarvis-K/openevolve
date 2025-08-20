@@ -1,0 +1,18 @@
+{
+  "id": "2997e9d8-46e1-493d-90ca-cda885d9840c",
+  "code": "def optimized_function(x):\n    # Iteration 11, Island 1\n    # Score: 0.6117\n    result = 0\n    for i in range(21):\n        result += x * 0.61 + -0.097\n    return result / 21",
+  "language": "python",
+  "metrics": {
+    "combined_score": 0.6117087939007174,
+    "accuracy": 0.6539986482420174,
+    "efficiency": 0.6358875266893835,
+    "complexity": 0.3753488296389303,
+    "robustness": 0.630261185034713
+  },
+  "iteration_found": 11,
+  "parent_id": null,
+  "metadata": {
+    "island": 1,
+    "created_at": "2024-01-12T11:00:00Z"
+  }
+}

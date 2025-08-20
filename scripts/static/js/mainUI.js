@@ -28,7 +28,7 @@ if (!document.getElementById('custom-dark-toggle')) {
 }
 
 // Tab switching logic
-const tabs = ["branching", "performance", "list"];
+const tabs = ["branching", "performance", "islands", "learning", "list"];
 tabs.forEach(tab => {
     document.getElementById(`tab-${tab}`).addEventListener('click', function() {
         tabs.forEach(t => {
@@ -39,6 +39,21 @@ tabs.forEach(tab => {
         this.classList.add('active');
         const view = document.getElementById(`view-${tab}`);
         if (view) view.style.display = 'block';
+        
+        // Render content for specific tabs when they become active
+        if (tab === 'islands' && window.lastDataStr) {
+            const data = JSON.parse(window.lastDataStr);
+            if (window.renderIslandsView) {
+                window.renderIslandsView(data);
+            }
+        }
+        if (tab === 'learning' && window.lastDataStr) {
+            const data = JSON.parse(window.lastDataStr);
+            if (window.renderLearningCurve) {
+                window.renderLearningCurve(data);
+            }
+        }
+        
         // Synchronize node selection when switching tabs
         if (tab === 'list' || tab === 'branching') {
             if (selectedProgramId) {
@@ -65,10 +80,10 @@ function setTheme(theme) {
 function getSystemTheme() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
-// On load, use localStorage or system default to determine theme
+// On load, use localStorage or default to light theme
 (function() {
     let theme = localStorage.getItem('theme');
-    if (!theme) theme = getSystemTheme();
+    if (!theme) theme = 'light';  // Default to light mode for professional appearance
     setTheme(theme);
 })();
 document.getElementById('darkmode-toggle').addEventListener('change', function() {

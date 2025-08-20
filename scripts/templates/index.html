@@ -16,6 +16,8 @@
         <div class="tabs">
             <div class="tab active" id="tab-branching">Branching</div>
             <div class="tab" id="tab-performance">Performance</div>
+            <div class="tab" id="tab-islands">Islands</div>
+            <div class="tab" id="tab-learning">Learning Curve</div>
             <div class="tab" id="tab-list">List</div>
         </div>
         <label class="toolbar-label" for="metric-select">Metric:
@@ -36,6 +38,48 @@
             <span id="darkmode-label">🌙</span>
         </div>
     </div>
+    
+    <!-- Evolution Status Panel -->
+    <div id="status-panel" class="status-panel collapsed">
+        <div class="status-header" onclick="toggleStatusPanel()">
+            <span class="status-title">演化状态</span>
+            <span id="status-indicator" class="status-indicator">●</span>
+            <span class="status-toggle">▼</span>
+        </div>
+        <div class="status-content">
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-label">当前进度</div>
+                    <div class="status-value" id="status-progress">0 / 0</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label">最佳分数</div>
+                    <div class="status-value" id="status-best-score">-</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label">演化速度</div>
+                    <div class="status-value" id="status-speed">0.0 iter/min</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label">成功率</div>
+                    <div class="status-value" id="status-success-rate">0.0%</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label">总程序数</div>
+                    <div class="status-value" id="status-total-programs">0</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label">运行时间</div>
+                    <div class="status-value" id="status-runtime">00:00:00</div>
+                </div>
+            </div>
+            <div class="status-chart">
+                <div class="status-label">分数趋势</div>
+                <div id="score-trend-chart"></div>
+            </div>
+        </div>
+    </div>
+    
     <div id="sidebar">
         <div id="sidebar-content">
             <span style="color:#888;">
@@ -59,6 +103,22 @@
         <div id="node-list-container"></div>
     </div>
     <div id="view-performance" style="padding-top:4.5em;"></div>
+    <div id="view-islands" style="display:none;padding-top:3.5em;">
+        <div class="islands-container">
+            <h2>Islands Status</h2>
+            <div id="islands-grid" class="islands-grid"></div>
+        </div>
+    </div>
+    <div id="view-learning" style="display:none;padding-top:3.5em;">
+        <div class="learning-container">
+            <h2>Learning Curve</h2>
+            <div id="learning-curve-chart"></div>
+            <div id="code-viewer" class="code-viewer" style="display:none;">
+                <h3>Program Code (Iteration <span id="code-iteration"></span>)</h3>
+                <pre id="code-content"></pre>
+            </div>
+        </div>
+    </div>
     <div id="view-prompts" style="padding-top:3.5em;"></div>
     <script type="module" src="{{ url_for('static', filename='js/state.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
@@ -67,5 +127,7 @@
     <script type="module" src="{{ url_for('static', filename='js/graph.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/performance.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/list.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/islands.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/learning-curve.js') }}"></script>
 </body>
 </html>
