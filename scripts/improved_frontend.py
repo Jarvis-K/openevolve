@@ -10,6 +10,7 @@ import streamlit as st
 from openevolve import OpenEvolve
 from openevolve.config import load_config
 import streamlit.components.v1 as components
+import requests
 
 st.set_page_config(
     page_title="OpenEvolve - 算法演化平台", 
@@ -26,10 +27,32 @@ if 'visualizer_process' not in st.session_state:
 def start_visualizer():
     if st.session_state.visualizer_process is None:
         try:
-            cmd = ["python3", "scripts/visualizer.py", "--path", "demo_evolution_data", "--host", "0.0.0.0", "--port", "8081"]
+            # 检查是否已经有visualizer在运行
+            try:
+                response = requests.get("http://localhost:8083/api/data", timeout=1)
+                if response.status_code == 200:
+                    st.success("发现已运行的可视化器，将直接使用")
+                    return True
+            except:
+                pass  # 如果连接失败，说明没有运行的visualizer
+            
+            cmd = ["python3", "scripts/visualizer.py", "--path", "demo_evolution_data", "--host", "0.0.0.0", "--port", "8083"]
             st.session_state.visualizer_process = subprocess.Popen(cmd)
-            time.sleep(2)
-            return True
+            time.sleep(3)  # 给更多时间启动
+            
+            # 验证启动成功
+            try:
+                response = requests.get("http://localhost:8083/api/data", timeout=5)
+                if response.status_code == 200:
+                    st.success("可视化器启动成功")
+                    return True
+                else:
+                    st.error("可视化器启动失败：无法连接")
+                    return False
+            except Exception as e:
+                st.error(f"可视化器启动失败：{e}")
+                return False
+                
         except Exception as e:
             st.error(f"启动可视化器失败: {e}")
             return False
@@ -93,7 +116,7 @@ with col1:
             components.html("""
                 <script>
                 var currentHost = window.location.hostname;
-                var visualizerUrl = 'http://' + currentHost + ':8081';
+                var visualizerUrl = 'http://' + currentHost + ':8083';
                 document.write('<iframe src="' + visualizerUrl + '" width="100%" height="600px" frameborder="0"></iframe>');
                 </script>
             """, height=600)
