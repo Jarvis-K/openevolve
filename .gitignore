@@ -53,3 +53,9 @@ htmlcov/
 # For SR
 secrets.yaml
 problems
+
+# Allow frontend library directory
+!/alphaevolve-demo/lib/
+!/alphaevolve-demo/lib/*
+!/alphaevolve-demo/app/results/
+!/alphaevolve-demo/app/results/*

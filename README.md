@@ -643,3 +643,8 @@ If you use OpenEvolve in your research, please cite:
 ```
 
 
+
+## AlphaEvolve Demo Frontend
+
+A Next.js demo interface that can launch OpenEvolve runs and display project hub, monitor and results views.
+See [alphaevolve-demo/README.md](alphaevolve-demo/README.md) for installation and usage details.
