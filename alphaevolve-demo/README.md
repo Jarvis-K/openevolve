@@ -42,11 +42,27 @@ alphaevolve-demo/
 
 ## 安装与运行
 
+### 依赖安装
+
+该前端需要 **Node.js 18+** 以及可执行的 **Python** 环境。若要实际调用 `openevolve-run.py`，请先在仓库根目录安装 OpenEvolve 依赖：
+
 ```bash
-# Node 18+ 建议：v18.18 / v20 LTS
-pnpm i        # 或 npm i / yarn
+pip install -e ..
+```
+
+随后在本目录安装前端依赖：
+
+```bash
+pnpm install   # 或 npm install / yarn
+
+# 可选：安装 Playwright 浏览器以运行 E2E 测试
+npx playwright install
+```
+
+### 启动开发服务器
+
+```bash
 pnpm dev      # http://localhost:3000 （自动重定向到 /project-hub）
-# 需确保系统可执行 python 且已安装 openevolve 依赖
 ```
 
 ### 最小 Playwright E2E（可选）
